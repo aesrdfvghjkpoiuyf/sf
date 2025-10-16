@@ -35,6 +35,8 @@ app.post("/webflow", async (req, res) => {
       return res.status(400).json({ error: "Missing email" })
     }
 
+    console.log("📝 Parsed form data:", { name, email, companyName, monthlyCalls })
+
     // Construct Intercom contact payload
     const intercomData = {
       role: "user",
@@ -48,7 +50,9 @@ app.post("/webflow", async (req, res) => {
       },
     }
 
-    // Send to Intercom
+    console.log("🚀 Sending to Intercom...")
+    console.log("Using token:", process.env.INTERCOM_ACCESS_TOKEN ? "Token found ✓" : "Token missing ✗")
+
     const response = await axios.post("https://api.intercom.io/contacts", intercomData, {
       headers: {
         Authorization: `Bearer ${process.env.INTERCOM_ACCESS_TOKEN}`,
