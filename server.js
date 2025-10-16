@@ -4,22 +4,18 @@ import axios from "axios";
 const app = express();
 app.use(express.json());
 
-// ✅ Test route
 app.get("/", (req, res) => {
   res.send("✅ Webflow → Intercom Server Running");
 });
 
-// ✅ Webhook endpoint
 app.post("/webflow-webhook", async (req, res) => {
   console.log("📩 Webflow form submission received:");
   console.log(JSON.stringify(req.body, null, 2));
 
   try {
-    // Extract correct data shape
     const payload = req.body.payload || {};
     const data = payload.data || {};
 
-    // Get name & email safely
     const name = data.Name || data.name || "No Name";
     const email = data.Email || data.email;
 
@@ -28,16 +24,16 @@ app.post("/webflow-webhook", async (req, res) => {
       return res.status(400).send("Missing email field in form data");
     }
 
-    // ✅ Send to Intercom
+    // ✅ Correct Intercom header for workspace access token
     await axios.post(
       "https://api.intercom.io/contacts",
       { email, name },
       {
         headers: {
-          Authorization: `Bearer ${process.env.INTERCOM_ACCESS_TOKEN}`,
+          Authorization: `Basic ${process.env.INTERCOM_ACCESS_TOKEN}`,
           "Content-Type": "application/json",
-          Accept: "application/json"
-        }
+          Accept: "application/json",
+        },
       }
     );
 
