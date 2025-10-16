@@ -1,33 +1,57 @@
 import express from "express";
+import bodyParser from "body-parser";
 import axios from "axios";
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 10000;
 
+// Middleware
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+// Root route
 app.get("/", (req, res) => {
-  res.send("✅ Webflow → Intercom Server Running");
+  res.send("✅ Webflow → Intercom integration is running!");
 });
 
-app.post("/webflow-webhook", async (req, res) => {
+// Webflow form submission webhook
+app.post("/webflow", async (req, res) => {
   console.log("📩 Webflow form submission received:");
   console.log(JSON.stringify(req.body, null, 2));
 
   try {
-    const payload = req.body.payload || {};
-    const data = payload.data || {};
+    const { payload } = req.body;
+    const formData = payload?.data || {};
 
-    const name = data.Name || data.name || "No Name";
-    const email = data.Email || data.email;
+    const name = formData["Name"] || "Unknown";
+    const email = formData["Email"];
+    const companyName = formData["Company Name"] || "";
+    const monthlyCalls = formData["Monthly Calls"] || "";
+    const keyIntegrations = formData["Key Software Integrations"] || "";
+    const mainChallenge = formData["Biggest Call Handling Challenge"] || "";
 
     if (!email) {
-      console.error("❌ Missing email field in payload:", data);
-      return res.status(400).send("Missing email field in form data");
+      console.error("❌ Missing email field — cannot send to Intercom.");
+      return res.status(400).json({ error: "Missing email" });
     }
 
-    // ✅ Correct Intercom header for workspace access token
-    await axios.post(
+    // Construct Intercom contact payload
+    const intercomData = {
+      role: "user",
+      email,
+      name,
+      custom_attributes: {
+        "Company Name": companyName,
+        "Monthly Calls": monthlyCalls,
+        "Key Software Integrations": keyIntegrations,
+        "Biggest Call Handling Challenge": mainChallenge,
+      },
+    };
+
+    // Send to Intercom
+    const response = await axios.post(
       "https://api.intercom.io/contacts",
-      { email, name },
+      intercomData,
       {
         headers: {
           Authorization: `Basic ${process.env.INTERCOM_ACCESS_TOKEN}`,
@@ -37,16 +61,17 @@ app.post("/webflow-webhook", async (req, res) => {
       }
     );
 
-    console.log("✅ Data sent to Intercom successfully");
-    res.status(200).send("OK");
+    console.log("✅ Successfully sent to Intercom:");
+    console.log(response.data);
+
+    res.status(200).json({ success: true });
   } catch (error) {
-    console.error(
-      "❌ Error sending to Intercom:",
-      error.response?.data || error.message
-    );
-    res.status(500).send("Error sending to Intercom");
+    console.error("❌ Error sending to Intercom:", error.response?.data || error.message);
+    res.status(500).json({ error: "Failed to send to Intercom" });
   }
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
