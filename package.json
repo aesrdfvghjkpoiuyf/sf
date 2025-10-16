@@ -1,6 +1,7 @@
 {
   "name": "webflow-intercom-middleware",
   "version": "1.0.0",
+  "description": "Middleware to connect Webflow form submissions to Intercom via API",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
