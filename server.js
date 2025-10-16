@@ -51,7 +51,14 @@ app.post("/webflow", async (req, res) => {
     }
 
     console.log("🚀 Sending to Intercom...")
-    console.log("Using token:", process.env.INTERCOM_ACCESS_TOKEN ? "Token found ✓" : "Token missing ✗")
+    console.log("Token status:", process.env.INTERCOM_ACCESS_TOKEN ? "Token found ✓" : "Token missing ✗")
+
+    if (process.env.INTERCOM_ACCESS_TOKEN) {
+      const token = process.env.INTERCOM_ACCESS_TOKEN
+      console.log("Token length:", token.length)
+      console.log("Token starts with:", token.substring(0, 10) + "...")
+      console.log("Token ends with:", "..." + token.substring(token.length - 10))
+    }
 
     const response = await axios.post("https://api.intercom.io/contacts", intercomData, {
       headers: {
@@ -66,7 +73,10 @@ app.post("/webflow", async (req, res) => {
 
     res.status(200).json({ success: true })
   } catch (error) {
-    console.error("❌ Error sending to Intercom:", error.response?.data || error.message)
+    console.error("❌ Error sending to Intercom:")
+    console.error("Status:", error.response?.status)
+    console.error("Response:", error.response?.data)
+    console.error("Message:", error.message)
     res.status(500).json({ error: "Failed to send to Intercom" })
   }
 })
