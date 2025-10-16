@@ -1,57 +1,60 @@
-// server.js
-const express = require('express');
-const axios = require('axios');
+import express from "express";
+import axios from "axios";
 
 const app = express();
 app.use(express.json());
 
-// Load token from Render environment variable
-const INTERCOM_TOKEN = process.env.INTERCOM_TOKEN;
-
-// Health check (optional)
-app.get('/', (req, res) => {
-  res.send('✅ Webflow → Intercom middleware is running');
+// ✅ Simple GET route to confirm server is live
+app.get("/", (req, res) => {
+  res.send("✅ Webflow → Intercom Server Running");
 });
 
-app.post('/webflow-webhook', async (req, res) => {
-  try {
-    const payload = req.body;
+// ✅ Webflow form submission handler
+app.post("/webflow-webhook", async (req, res) => {
+  console.log("📩 Webflow form submission received:");
+  console.log(JSON.stringify(req.body, null, 2)); // log full payload for debugging
 
-    // Adjust field mapping if your Webflow fields are named differently
-    const email = payload.data.email;
-    const name = payload.data.name;
+  try {
+    // Handle possible Webflow payload shapes
+    const formData = req.body.data || req.body;
+
+    // Try lowercase + uppercase variations
+    const name = formData.name || formData.Name || "No Name Provided";
+    const email = formData.email || formData.Email;
 
     if (!email) {
-      return res.status(400).send('Missing email field from Webflow payload');
+      console.error("❌ Missing email field in payload:", formData);
+      return res.status(400).send("Missing email field in form data");
     }
 
-    // Send contact to Intercom
-    const response = await axios.post(
-      'https://api.intercom.io/contacts',
+    // ✅ Send data to Intercom
+    await axios.post(
+      "https://api.intercom.io/contacts",
       {
-        email: email,
-        name: name,
-        role: 'lead'
+        email,
+        name
       },
       {
         headers: {
-          'Authorization': `Bearer ${INTERCOM_TOKEN}`,
-          'Content-Type': 'application/json',
-          'Intercom-Version': '2.11'
+          Authorization: `Bearer ${process.env.INTERCOM_ACCESS_TOKEN}`,
+          "Content-Type": "application/json",
+          Accept: "application/json"
         }
       }
     );
 
-    console.log('✅ Intercom response:', response.data);
-    res.status(200).send('Contact pushed to Intercom');
+    console.log("✅ Data sent to Intercom successfully");
+    res.status(200).send("OK");
   } catch (error) {
-    console.error('❌ Error pushing to Intercom:', error.response?.data || error.message);
-    res.status(500).send('Error sending to Intercom');
+    console.error(
+      "❌ Error sending to Intercom:",
+      error.response?.data || error.message
+    );
+    res.status(500).send("Error sending to Intercom");
   }
 });
 
-// Render dynamically assigns PORT — use it instead of hardcoding 3000
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () =>
+  console.log(`🚀 Server running on port ${PORT}`)
+);
