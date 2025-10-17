@@ -18,9 +18,14 @@ app.post("/webflow-webhook", async (req, res) => {
     const payload = req.body.payload || {};
     const data = payload.data || {};
 
-    // Extract data from Webflow form
+    // Extract form fields
     const name = data.Name || data.name || "No Name";
     const email = data.Email || data.email;
+    const companyName = data["Company Name"] || "";
+    const monthlyCalls = data["Monthly Calls"] || "";
+    const integrations = data["Key Software Integrations"] || "";
+    const challenge = data["Biggest Call Handling Challenge"] || "";
+    const pageUrl = payload.pageUrl || "";
 
     if (!email) {
       console.error("❌ Missing email field in payload:", data);
@@ -29,20 +34,60 @@ app.post("/webflow-webhook", async (req, res) => {
 
     console.log(`📤 Sending to Intercom: ${email} (${name})`);
 
-    // ✅ Send contact to Intercom
-    const response = await axios.post(
+    // ✅ Send Contact to Intercom with all custom attributes
+    const contactResponse = await axios.post(
       "https://api.intercom.io/contacts",
-      { email, name },
+      {
+        email,
+        name,
+        custom_attributes: {
+          company_name: companyName,
+          monthly_calls: monthlyCalls,
+          key_integrations: integrations,
+          call_challenge: challenge,
+          page_url: pageUrl,
+          form_name: payload.name || "Webflow Form",
+        },
+      },
       {
         headers: {
-          Authorization: "Bearer dG9rOjkzNTU0YzJhXzgzMmFfNGExYl84MzlmXzFmMmRmYjRmZDEwYToxOjA=",
+          Authorization:
+            "Bearer dG9rOjkzNTU0YzJhXzgzMmFfNGExYl84MzlmXzFmMmRmYjRmZDEwYToxOjA=", // your token
           "Content-Type": "application/json",
           Accept: "application/json",
         },
       }
     );
 
-    console.log("✅ Data sent to Intercom successfully:", response.data);
+    console.log("✅ Contact created/updated successfully:", contactResponse.data);
+
+    // ✅ Create an Intercom event for this form submission
+    await axios.post(
+      "https://api.intercom.io/events",
+      {
+        event_name: "webflow_form_submitted",
+        created_at: Math.floor(Date.now() / 1000),
+        email: email,
+        metadata: {
+          form_name: payload.name,
+          company_name: companyName,
+          monthly_calls: monthlyCalls,
+          key_integrations: integrations,
+          call_challenge: challenge,
+          page_url: pageUrl,
+        },
+      },
+      {
+        headers: {
+          Authorization:
+            "Bearer dG9rOjkzNTU0YzJhXzgzMmFfNGExYl84MzlmXzFmMmRmYjRmZDEwYToxOjA=",
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      }
+    );
+
+    console.log("✅ Event logged in Intercom successfully");
     res.status(200).send("OK");
   } catch (error) {
     console.error(
