@@ -35,7 +35,7 @@ app.post("/webflow-webhook", async (req, res) => {
       { email, name },
       {
         headers: {
-          Authorization: "Bearer dG9rOmEwYjQ0ZjVkXzcwNGNfNDFiMV9hYjE1XzljNDMwZjVlOWEzNDoxOjA=",
+          Authorization: "Bearer dG9rOjkzNTU0YzJhXzgzMmFfNGExYl84MzlmXzFmMmRmYjRmZDEwYToxOjA=",
           "Content-Type": "application/json",
           Accept: "application/json",
         },
