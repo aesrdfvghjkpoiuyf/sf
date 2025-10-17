@@ -1,57 +1,65 @@
 import express from "express";
+import bodyParser from "body-parser";
 import axios from "axios";
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 10000;
+const INTERCOM_ACCESS_TOKEN = process.env.INTERCOM_ACCESS_TOKEN;
 
-// ✅ Root route
+// Middleware
+app.use(bodyParser.json());
+
+// Root route
 app.get("/", (req, res) => {
-  res.send("✅ Webflow → Intercom Server is running!");
+  res.send("✅ Webflow → Intercom integration is running");
 });
 
-// ✅ Webflow Webhook route
-app.post("/webflow-webhook", async (req, res) => {
-  console.log("📩 Webflow form submission received:");
-  console.log(JSON.stringify(req.body, null, 2));
-
+// Webflow webhook endpoint
+app.post("/webflow", async (req, res) => {
   try {
-    const payload = req.body.payload || {};
-    const data = payload.data || {};
+    const data = req.body;
 
-    // Extract data from Webflow form
-    const name = data.Name || data.name || "No Name";
-    const email = data.Email || data.email;
+    console.log("📩 Webflow form submission received:");
+    console.log(JSON.stringify(data, null, 2));
 
-    if (!email) {
-      console.error("❌ Missing email field in payload:", data);
-      return res.status(400).send("Missing email field in form data");
-    }
+    const formData = data?.payload?.data || {};
+    const name = formData["Name"] || "Unknown";
+    const email = formData["Email"] || "noemail@unknown.com";
+    const company = formData["Company Name"] || "N/A";
 
     console.log(`📤 Sending to Intercom: ${email} (${name})`);
 
-    // ✅ Send contact to Intercom
     const response = await axios.post(
       "https://api.intercom.io/contacts",
-      { email, name },
+      {
+        role: "user",
+        email,
+        name,
+        custom_attributes: {
+          company_name: company,
+          monthly_calls: formData["Monthly Calls"] || "",
+          key_integrations: formData["Key Software Integrations"] || "",
+          challenge: formData["Biggest Call Handling Challenge"] || ""
+        }
+      },
       {
         headers: {
-          Authorization: `Bearer ${process.env.INTERCOM_ACCESS_TOKEN}`,
+          Authorization: INTERCOM_ACCESS_TOKEN,
           "Content-Type": "application/json",
-          Accept: "application/json",
-        },
+          Accept: "application/json"
+        }
       }
     );
 
-    console.log("✅ Data sent to Intercom successfully:", response.data);
-    res.status(200).send("OK");
+    console.log("✅ Successfully sent to Intercom:", response.data);
+    res.status(200).send("Success");
   } catch (error) {
-    console.error(
-      "❌ Error sending to Intercom:",
-      error.response?.data || error.message
-    );
+    console.error("❌ Error sending to Intercom:", error.response?.data || error.message);
     res.status(500).send("Error sending to Intercom");
   }
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
