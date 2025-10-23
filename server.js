@@ -18,7 +18,7 @@ app.post("/webflow-webhook", async (req, res) => {
     const payload = req.body.payload || {};
     const data = payload.data || {};
 
-    // Extract form fields safely
+    // Extract form fields
     const name = data.Name || data.name || "No Name";
     const email = data.Email || data.email;
     const companyName = data["Company Name"] || "";
@@ -34,14 +34,14 @@ app.post("/webflow-webhook", async (req, res) => {
 
     console.log(`📤 Sending to Intercom: ${email} (${name})`);
 
-    // ✅ Step 1: Send Contact to Intercom
+    // ✅ Send Contact to Intercom with custom attributes
     const contactResponse = await axios.post(
       "https://api.intercom.io/contacts",
       {
         email,
         name,
         custom_attributes: {
-          company: companyName, // ✅ fixed (Intercom default field)
+          company_name: companyName,
           monthly_calls: monthlyCalls,
           key_integrations: integrations,
           call_challenge: challenge,
@@ -52,7 +52,7 @@ app.post("/webflow-webhook", async (req, res) => {
       {
         headers: {
           Authorization:
-            "Bearer dG9rOjkzNTU0YzJhXzgzMmFfNGExYl84MzlmXzFmMmRmYjRmZDEwYToxOjA=", // ✅ your Intercom token
+            "Bearer dG9rOjkzNTU0YzJhXzgzMmFfNGExYl84MzlmXzFmMmRmYjRmZDEwYToxOjA=", // your token
           "Content-Type": "application/json",
           Accept: "application/json",
         },
@@ -61,16 +61,16 @@ app.post("/webflow-webhook", async (req, res) => {
 
     console.log("✅ Contact created/updated successfully:", contactResponse.data);
 
-    // ✅ Step 2: Create Event in Intercom
+    // ✅ Log event for submission
     await axios.post(
       "https://api.intercom.io/events",
       {
         event_name: "webflow_form_submitted",
         created_at: Math.floor(Date.now() / 1000),
-        email,
+        email: email,
         metadata: {
-          form_name: payload.name || "Enterprise Lead Form",
-          company: companyName,
+          form_name: payload.name,
+          company_name: companyName,
           monthly_calls: monthlyCalls,
           key_integrations: integrations,
           call_challenge: challenge,
@@ -80,7 +80,7 @@ app.post("/webflow-webhook", async (req, res) => {
       {
         headers: {
           Authorization:
-            "Bearer dG9rOjkzNTU0YzJhXzgzMmFfNGExYl84MzlmXzFmMmRmYjRmZDEwYToxOjA=", // ✅ same token
+            "Bearer dG9rOjkzNTU0YzJhXzgzMmFfNGExYl84MzlmXzFmMmRmYjRmZDEwYToxOjA=",
           "Content-Type": "application/json",
           Accept: "application/json",
         },
@@ -90,7 +90,10 @@ app.post("/webflow-webhook", async (req, res) => {
     console.log("✅ Event logged in Intercom successfully");
     res.status(200).send("OK");
   } catch (error) {
-    console.error("❌ Error sending to Intercom:", error.response?.data || error.message);
+    console.error(
+      "❌ Error sending to Intercom:",
+      error.response?.data || error.message
+    );
     res.status(500).send("Error sending to Intercom");
   }
 });
